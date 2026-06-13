@@ -97,6 +97,17 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
 .tag.premium,.tag.silver-series { border-color: var(--yellow); color: var(--yellow); }
 .tag.car-culture { border-color: var(--green); color: var(--green); }
 
+/* Special tags */
+.sp { display: inline-block; border-radius: 3px; padding: 1px 6px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+.sp-sth  { background: #ff6b00; color: #fff; }                /* Super Treasure Hunt - orange */
+.sp-th   { background: #ffd700; color: #000; }                /* Treasure Hunt - gold */
+.sp-chase { background: #c0392b; color: #fff; }               /* Chase - red */
+.sp-super-chase { background: #8e44ad; color: #fff; }         /* Super Chase - purple */
+.sp-raw-chase { background: #2c3e50; color: #ecf0f1; border: 1px solid #7f8c8d; } /* Raw Chase - dark */
+.sp-limited { background: #1a6b3c; color: #fff; }             /* Limited Edition - green */
+.sp-nismo  { background: #c0392b; color: #fff; border: 2px solid #e74c3c; } /* NISMO - red */
+.sp-mbx-chase { background: #2980b9; color: #fff; }           /* Matchbox Super Chase - blue */
+
 .new-row-form {
   position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface);
   border-top: 2px solid var(--red); padding: 10px 20px; display: none;
@@ -130,6 +141,7 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
     <div class="logo">🚗 Hot<span>Wheels</span></div>
     <div class="stats">
       <div class="stat">收藏 <b id="s-total">0</b></div>
+      <div class="stat">库存 <b id="s-stock">0</b></div>
       <div class="stat">成本 <b id="s-cost">$0</b></div>
       <div class="stat">已售 <b id="s-sold">0</b></div>
       <div class="stat">收入 <b id="s-income">$0</b></div>
@@ -212,6 +224,21 @@ function render() {
       const td=document.createElement('td'); td.title=String(row[h]??'');
       if(h==='Type'){
         const t=document.createElement('span'); t.className='tag '+(row[h]||'').toLowerCase().replace(/[\s\/]+/g,'-'); t.textContent=row[h]||''; td.appendChild(t);
+      } else if(h==='Special' && row[h]) {
+        const spMap = {
+          'Super Treasure Hunt': 'sp-sth',
+          'Treasure Hunt': 'sp-th',
+          'Chase': 'sp-chase',
+          'Super Chase': 'sp-super-chase',
+          'Raw Chase': 'sp-raw-chase',
+          'Limited Edition': 'sp-limited',
+          'NISMO Festival Exclusive ': 'sp-nismo',
+          'Matchbox Super Chase': 'sp-mbx-chase',
+        };
+        const s=document.createElement('span');
+        s.className='sp '+(spMap[row[h]]||'sp-chase');
+        s.textContent=row[h]; td.appendChild(s);
+        td.className='edit'; td.ondblclick=()=>startEdit(td,row,h);
       } else { td.textContent=row[h]??''; td.className='edit'; td.ondblclick=()=>startEdit(td,row,h); }
       tr.appendChild(td);
     });
@@ -222,8 +249,9 @@ function render() {
   const cost=rows.reduce((s,r)=>s+(parseFloat(r['Cost $'])||0),0);
   const income=rows.reduce((s,r)=>s+(parseFloat(r['Income $'])||0),0);
   document.getElementById('s-total').textContent=rows.length;
+  document.getElementById('s-stock').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
   document.getElementById('s-cost').textContent='$'+cost.toFixed(0);
-  document.getElementById('s-sold').textContent=rows.filter(r=>r['Sold Date']||r['Sold Amount']).length;
+  document.getElementById('s-sold').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Sold Amount'])||0),0);
   document.getElementById('s-income').textContent='$'+income.toFixed(0);
   document.getElementById('count').textContent=`显示 ${vis.length} / ${rows.length} 条`;
 }
