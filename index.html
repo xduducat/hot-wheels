@@ -90,6 +90,8 @@ input[type=search] { width: 200px; }
 .btn:hover { opacity: 0.85; }
 .btn.sec { background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); }
 .btn.del { background: #333; color: var(--red); border: 1px solid var(--red); }
+.btn.ins { background: #333; color: var(--text-dim); border: 1px solid var(--border); }
+.btn.ins:hover { color: var(--green); border-color: var(--green); }
 .count-label { font-size: 11px; color: var(--text-dim); margin-left: auto; font-family: var(--mono); }
 
 .table-wrap { overflow-x: auto; padding: 0 20px 100px; }
@@ -329,9 +331,10 @@ function render() {
       } else { td.textContent=row[h]??''; td.className='edit'; td.ondblclick=()=>startEdit(td,row,h); }
       tr.appendChild(td);
     });
-    const td=document.createElement('td');
+    const td=document.createElement('td'); td.style.whiteSpace='nowrap';
+    const ins=document.createElement('button'); ins.className='btn ins'; ins.textContent='+'; ins.style.cssText='font-size:10px;padding:2px 6px;margin-right:4px'; ins.title='Insert row below'; ins.onclick=()=>insertRowBelow(row);
     const b=document.createElement('button'); b.className='btn del'; b.textContent='Del'; b.style.cssText='font-size:10px;padding:2px 6px'; b.onclick=()=>delRow(row._id);
-    td.appendChild(b); tr.appendChild(td); tb.appendChild(tr);
+    td.appendChild(ins); td.appendChild(b); tr.appendChild(td); tb.appendChild(tr);
   });
   document.getElementById('s-total').textContent=rows.length;
   document.getElementById('s-stock').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
@@ -372,6 +375,25 @@ function startEdit(td,row,h) {
 function delRow(id) {
   if(!confirm('Delete this row?'))return;
   rows=rows.filter(r=>r._id!==id); filter(); toast('Deleted (local only)','success');
+}
+
+function insertRowBelow(refRow) {
+  const idx = rows.indexOf(refRow);
+  const newRow = Object.fromEntries(H.map(h=>[h,'']));
+  newRow._id = Date.now();
+  newRow._sheetRow = null; // new row, no sheet position yet
+  rows.splice(idx + 1, 0, newRow);
+  filter();
+  // Find the new row's first editable cell and start editing
+  setTimeout(() => {
+    const trs = document.getElementById('tbody').querySelectorAll('tr');
+    const visIdx = vis.indexOf(newRow);
+    if (visIdx >= 0 && trs[visIdx]) {
+      const firstTd = trs[visIdx].querySelectorAll('td.edit')[1]; // Name column
+      if (firstTd) firstTd.dispatchEvent(new MouseEvent('dblclick'));
+    }
+  }, 50);
+  toast('Row inserted — fill in details and save', 'success');
 }
 
 function filter() {
