@@ -268,6 +268,7 @@ async function saveCell(row, h, value) {
     // Wait 1.5s for Sheets to recalculate, then refresh the row
     setTimeout(() => refreshRow(row), 1500);
   } catch(e) {
+    console.log('saveCell error:', e);
     toast('保存失败', 'error');
   }
 }
