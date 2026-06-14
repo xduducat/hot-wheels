@@ -238,7 +238,7 @@ async function loadFromSheets() {
     const keepIdx = allHeaders.map((h,i)=>EXCLUDE.has(h)?-1:i).filter(i=>i>=0);
     H = keepIdx.map(i=>allHeaders[i]);
     rows = raw.slice(1)
-      .filter(r => r[0] && r[1])
+      .filter(r => !(r[0]==='' && r[1]===''))
       .map((r,i) => ({...Object.fromEntries(H.map((h,j)=>[h, r[keepIdx[j]]??''])), _id:i, _orig: keepIdx.map(i=>r[i]??'')}));
     dirty = false;
     buildHead();
