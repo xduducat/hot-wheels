@@ -115,9 +115,6 @@ td.edit:hover { background: rgba(255,255,255,0.04); }
 td input { background: var(--surface); border: 1px solid var(--red); color: var(--text); border-radius: 4px; padding: 2px 6px; font-size: 12px; width: 100%; min-width: 80px; outline: none; }
 
 .tag { display: inline-block; background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-size: 10px; color: var(--text-dim); }
-.tag.mainline { border-color: #4466ff; color: #4466ff; }
-.tag.premium,.tag.silver-series { border-color: var(--yellow); color: var(--yellow); }
-.tag.car-culture { border-color: var(--green); color: var(--green); }
 
 .sp { display: inline-block; border-radius: 3px; padding: 1px 6px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .sp-sth  { background: #ff6b00; color: #fff; }
@@ -241,7 +238,7 @@ async function loadFromSheets() {
     const keepIdx = allHeaders.map((h,i)=>EXCLUDE.has(h)?-1:i).filter(i=>i>=0);
     H = keepIdx.map(i=>allHeaders[i]);
     rows = raw.slice(1)
-      .filter(r => r[0] || r[1])
+      .filter(r => r[0] && r[1])
       .map((r,i) => ({...Object.fromEntries(H.map((h,j)=>[h, r[keepIdx[j]]??''])), _id:i, _orig: keepIdx.map(i=>r[i]??'')}));
     dirty = false;
     buildHead();
@@ -326,9 +323,7 @@ function render() {
     const tr=document.createElement('tr');
     H.forEach(h=>{
       const td=document.createElement('td'); td.title=String(row[h]??'');
-      if(h==='Type'){
-        const t=document.createElement('span'); t.className='tag '+(row[h]||'').toLowerCase().replace(/[\s\/]+/g,'-'); t.textContent=row[h]||''; td.appendChild(t);
-      } else if(h==='Special'&&row[h]){
+      if(h==='Special'&&row[h]){
         const s=document.createElement('span'); s.className='sp '+(SP_MAP[row[h]]||'sp-chase'); s.textContent=row[h]; td.appendChild(s);
         td.className='edit'; td.ondblclick=()=>startEdit(td,row,h);
       } else { td.textContent=row[h]??''; td.className='edit'; td.ondblclick=()=>startEdit(td,row,h); }
