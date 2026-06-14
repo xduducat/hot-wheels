@@ -12,7 +12,7 @@
   --mono: 'JetBrains Mono','Fira Mono',monospace;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size: 13px; min-height: 100vh; }
+body { background: var(--bg); color: var(--text); font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; font-size: 13px; min-height: 100vh; overflow-x: auto; }
 
 /* LOGIN */
 #login-screen {
@@ -94,14 +94,14 @@ input[type=search] { width: 200px; }
 .btn.ins:hover { color: var(--green); border-color: var(--green); }
 .count-label { font-size: 11px; color: var(--text-dim); margin-left: auto; font-family: var(--mono); }
 
-.table-wrap { overflow-x: auto; padding: 0 20px 100px; }
+.table-wrap { padding: 0 20px 100px; }
 table { width: 100%; border-collapse: collapse; min-width: 900px; margin-top: 10px; }
 thead th {
   background: var(--surface); color: var(--text-dim); font-size: 10px; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 10px;
   border-bottom: 2px solid var(--red); text-align: left; white-space: nowrap;
   cursor: pointer; user-select: none;
-
+  position: sticky; z-index: 97;
 }
 thead th:hover { color: var(--text); }
 thead th.asc::after { content: ' ↑'; color: var(--red); }
@@ -125,7 +125,6 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
 
 .sp { display: inline-block; border-radius: 3px; padding: 1px 6px; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .sp-sth  { background: #7aff3e; color: #000; }
-.sp-th   { background: #ffd700; color: #000; }
 .sp-chase { background: #66ffe4; color: #000; }
 .sp-super-chase { background: #7aff3e; color: #000; }
 .sp-raw-chase { background: #66ffe4; color: #000; }
@@ -179,7 +178,7 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
       <div class="stat">Income <b id="s-income">$0</b></div>
     </div>
     <div class="header-btns">
-      <span style="font-size:10px;color:var(--text-dim);font-family:var(--mono);">v1.2.0</span>
+      <span style="font-size:10px;color:var(--text-dim);font-family:var(--mono);">v1.2.6</span>
       <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </header>
@@ -197,7 +196,7 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
   </div>
 
   <div class="table-wrap">
-    <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+    <table id="main-table"><thead id="thead"></thead><tbody id="tbody"></tbody></table>
   </div>
 </div>
 
@@ -309,9 +308,9 @@ function buildFilters() {
 }
 
 const SP_MAP = {
-  'Super Treasure Hunt':'sp-sth','Treasure Hunt':'sp-th','Chase':'sp-chase',
+  'Super Treasure Hunt':'sp-sth','Chase':'sp-chase',
   'Super Chase':'sp-super-chase','Raw Chase':'sp-raw-chase',
-  'Limited Edition':'sp-limited','NISMO Festival Exclusive ':'sp-nismo',
+  'Limited Edition':'sp-limited','NISMO Festival Exclusive':'sp-nismo','NISMO Festival Exclusive ':'sp-nismo',
   'Matchbox Super Chase':'sp-mbx-chase'
 };
 
@@ -323,8 +322,9 @@ function render() {
       const td=document.createElement('td'); td.title=String(row[h]??''); if(h==='Name') td.classList.add('col-name');
       if(h==='Special'&&row[h]){
         const amount = parseFloat(row['Amount'])||0;
-        if (amount > 0) {
-          const s=document.createElement('span'); s.className='sp '+(SP_MAP[row[h]]||'sp-chase'); s.textContent=row[h]; td.appendChild(s);
+        const spClass = SP_MAP[row[h]] || SP_MAP[row[h].trim()];
+        if (amount > 0 && spClass) {
+          const s=document.createElement('span'); s.className='sp '+spClass; s.textContent=row[h]; td.appendChild(s);
         } else {
           td.textContent=row[h];
         }
@@ -343,6 +343,10 @@ function render() {
   document.getElementById('s-sold').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Sold Amount'])||0),0);
   updateStats();
   document.getElementById('count').textContent=`Showing ${vis.length} / ${rows.length}`;
+  requestAnimationFrame(() => {
+    const top = document.querySelector('header').offsetHeight + document.querySelector('.controls').offsetHeight;
+    document.querySelectorAll('#thead th').forEach(th => th.style.top = top + 'px');
+  });
 
 }
 
