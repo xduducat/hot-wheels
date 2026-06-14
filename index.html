@@ -99,7 +99,7 @@ thead th {
   text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 10px;
   border-bottom: 2px solid var(--red); text-align: left; white-space: nowrap;
   cursor: pointer; user-select: none;
-  position: sticky; top: 101px; z-index: 98;
+  position: sticky; top: 0; z-index: 98;
 }
 thead th:hover { color: var(--text); }
 thead th.asc::after { content: ' ↑'; color: var(--red); }
@@ -203,7 +203,7 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
 
 <script>
 const API_URL = 'https://script.google.com/macros/s/AKfycbxM4QzzA3PNwduouOB_HaRF2tXLcxPExkDhLFXgeVUgQbwROvvHd-Yl0vGX1e-DjAT9/exec';
-const PASS_HASH = '23083467c4a2d10502837f9cd4cc864681a17b115727487634c5e0c372772be8';
+const PASS_HASH = '795f57a507b6f85c56e32364eefe8c3fffc720a7e83403bf755449049a45eabd';
 const EXCLUDE = new Set(['Location','Store','Comments']);
 let allHeaders = [], keepIdx = [];
 
@@ -339,6 +339,12 @@ function render() {
   document.getElementById('s-sold').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Sold Amount'])||0),0);
   updateStats();
   document.getElementById('count').textContent=`Showing ${vis.length} / ${rows.length}`;
+  // Dynamically fix thead sticky top
+  const headerH = document.querySelector('header').offsetHeight;
+  const controlsH = document.querySelector('.controls').offsetHeight;
+  document.querySelectorAll('thead th').forEach(th => {
+    th.style.top = (headerH + controlsH) + 'px';
+  });
 }
 
 function updateStats() {
