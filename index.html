@@ -179,7 +179,7 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
       <div class="stat">Income <b id="s-income">$0</b></div>
     </div>
     <div class="header-btns">
-      <span style="font-size:10px;color:var(--text-dim);font-family:var(--mono);">v1.1.0</span>
+      <span style="font-size:10px;color:var(--text-dim);font-family:var(--mono);">v1.2.0</span>
       <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
   </header>
@@ -368,9 +368,27 @@ function startEdit(td,row,h) {
   inp.onblur=save; inp.onkeydown=e=>{ if(e.key==='Enter'){save();} if(e.key==='Escape'){td.textContent=old;} };
 }
 
-function delRow(id) {
+async function delRow(id) {
   if(!confirm('Delete this row?'))return;
-  rows=rows.filter(r=>r._id!==id); filter(); toast('Deleted (local only)','success');
+  const row = rows.find(r=>r._id===id);
+  rows = rows.filter(r=>r._id!==id);
+  filter();
+  if (row && row._sheetRow) {
+    try {
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        body: JSON.stringify({ action: 'delete', row: row._sheetRow }),
+      });
+      toast('Deleted ✓', 'success');
+      // Reload to resync _sheetRow indices
+      setTimeout(() => loadFromSheets(), 1500);
+    } catch(e) {
+      toast('Delete failed', 'error');
+    }
+  } else {
+    toast('Deleted ✓', 'success');
+  }
 }
 
 function insertRowBelow(refRow) {
