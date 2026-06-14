@@ -254,21 +254,17 @@ async function loadFromSheets() {
 async function saveCell(row, h, value) {
   const sheetRow = row._sheetRow;
   const colIdx = allHeaders.indexOf(h);
-  console.log('saveCell called, sheetRow:', sheetRow, 'colIdx:', colIdx, 'allHeaders length:', allHeaders.length);
   if (sheetRow == null || colIdx === -1) { console.log('EARLY RETURN - sheetRow:', sheetRow, 'colIdx:', colIdx); return; }
   try {
-    console.log('POST to:', API_URL, { row: sheetRow, col: colIdx + 1, value });
     await fetch(API_URL, {
       method: 'POST',
       mode: 'no-cors',
       body: JSON.stringify({ row: sheetRow, col: colIdx + 1, value }),
     });
-    console.log('POST done');
     toast('已保存 ✓', 'success');
     // Wait 1.5s for Sheets to recalculate, then refresh the row
     setTimeout(() => refreshRow(row), 1500);
   } catch(e) {
-    console.log('saveCell error:', e);
     toast('保存失败', 'error');
   }
 }
@@ -350,7 +346,6 @@ function startEdit(td,row,h) {
   const save=()=>{
     if(saved) return; saved=true;
     const newVal = inp.value;
-    console.log('Saving:', h, newVal, 'sheetRow:', row._sheetRow);
     row[h]=newVal; td.textContent=newVal; td.title=newVal;
     updateStats();
     saveCell(row, h, newVal);
