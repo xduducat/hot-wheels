@@ -172,8 +172,6 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
       <div class="stat">收入 <b id="s-income">$0</b></div>
     </div>
     <div class="header-btns">
-      <span class="unsaved-dot" id="unsaved-dot" title="有未保存的修改"></span>
-      <button class="save-btn" id="save-btn" onclick="saveToSheets()">💾 保存到 Sheets</button>
       <button class="logout-btn" onclick="logout()">退出</button>
     </div>
   </header>
@@ -202,6 +200,7 @@ td input { background: var(--surface); border: 1px solid var(--red); color: var(
 const API_URL = 'https://script.google.com/macros/s/AKfycbxM4QzzA3PNwduouOB_HaRF2tXLcxPExkDhLFXgeVUgQbwROvvHd-Yl0vGX1e-DjAT9/exec';
 const PASS_HASH = '23083467c4a2d10502837f9cd4cc864681a17b115727487634c5e0c372772be8';
 const EXCLUDE = new Set(['Location','Store','Comments']);
+let allHeaders = [], keepIdx = [];
 
 // ── AUTH ────────────────────────────────────────────
 async function sha256(s) {
@@ -235,11 +234,11 @@ async function loadFromSheets() {
     const res = await fetch(API_URL);
     const raw = await res.json();
     const allHeaders = raw[0];
-    const keepIdx = allHeaders.map((h,i)=>EXCLUDE.has(h)?-1:i).filter(i=>i>=0);
+    keepIdx = allHeaders.map((h,i)=>EXCLUDE.has(h)?-1:i).filter(i=>i>=0);
     H = keepIdx.map(i=>allHeaders[i]);
     rows = raw.slice(1)
       .filter(r => !(r[0]==='' && r[1]===''))
-      .map((r,i) => ({...Object.fromEntries(H.map((h,j)=>[h, r[keepIdx[j]]??''])), _id:i, _orig: keepIdx.map(i=>r[i]??'')}));
+      .map((r,i) => ({...Object.fromEntries(H.map((h,j)=>[h, r[keepIdx[j]]??''])), _id:i, _sheetRow: i+2}));
     dirty = false;
     buildHead();
     buildFilters();
@@ -251,46 +250,28 @@ async function loadFromSheets() {
   }
 }
 
-async function saveToSheets() {
-  const btn = document.getElementById('save-btn');
-  btn.textContent = '保存中…'; btn.disabled = true;
-  try {
-    // Rebuild full sheet rows including excluded columns
-    const res = await fetch(API_URL);
-    const raw = await res.json();
-    const allHeaders = raw[0];
-    const keepIdx = allHeaders.map((h,i)=>EXCLUDE.has(h)?-1:i).filter(i=>i>=0);
-
-    const out = [allHeaders];
-    rows.forEach(row => {
-      const fullRow = new Array(allHeaders.length).fill('');
-      keepIdx.forEach((origI, j) => { fullRow[origI] = row[H[j]]??''; });
-      // Restore excluded cols from original if available
-      if (row._orig) {
-        allHeaders.forEach((h,i) => { if(EXCLUDE.has(h)) fullRow[i] = raw[1] ? '' : ''; });
-      }
-      out.push(fullRow);
-    });
-
-    await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(out),
-    });
-    dirty = false;
-    document.getElementById('unsaved-dot').classList.remove('visible');
-    btn.classList.remove('visible');
-    toast('已保存到 Google Sheets ✓', 'success');
-  } catch(e) {
-    toast('保存失败，请重试', 'error');
-  }
-  btn.textContent = '💾 保存到 Sheets'; btn.disabled = false;
-}
-
 // ── UI ───────────────────────────────────────────────
-function markDirty() {
-  dirty = true;
-  document.getElementById('unsaved-dot').classList.add('visible');
-  document.getElementById('save-btn').classList.add('visible');
+async function saveCell(row, h, value) {
+  const sheetRow = row._sheetRow;
+  const colIdx = allHeaders.indexOf(h);
+  if (sheetRow == null || colIdx === -1) return;
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ row: sheetRow, col: colIdx + 1, value }),
+    });
+    const result = await res.json();
+    if (result.updatedRow) {
+      // Update all fields in this row from the returned sheet row
+      H.forEach((header, j) => {
+        row[header] = result.updatedRow[keepIdx[j]] ?? '';
+      });
+      updateStats();
+    }
+    toast('已保存 ✓', 'success');
+  } catch(e) {
+    toast('保存失败', 'error');
+  }
 }
 
 function buildHead() {
@@ -337,20 +318,35 @@ function render() {
   document.getElementById('s-stock').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
   document.getElementById('s-cost').textContent='$'+rows.reduce((s,r)=>s+(parseFloat(r['Cost $'])||0),0).toFixed(0);
   document.getElementById('s-sold').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Sold Amount'])||0),0);
-  document.getElementById('s-income').textContent='$'+rows.reduce((s,r)=>s+(parseFloat(r['Income $'])||0),0).toFixed(0);
+  updateStats();
   document.getElementById('count').textContent=`显示 ${vis.length} / ${rows.length} 条`;
+}
+
+function updateStats() {
+  document.getElementById('s-total').textContent=rows.length;
+  document.getElementById('s-stock').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Amount'])||0),0);
+  document.getElementById('s-cost').textContent='$'+rows.reduce((s,r)=>s+(parseFloat(r['Cost $'])||0),0).toFixed(0);
+  document.getElementById('s-sold').textContent=rows.reduce((s,r)=>s+(parseFloat(r['Sold Amount'])||0),0);
+  document.getElementById('s-income').textContent='$'+rows.reduce((s,r)=>s+(parseFloat(r['Income $'])||0),0).toFixed(0);
 }
 
 function startEdit(td,row,h) {
   const old=row[h]??''; const inp=document.createElement('input'); inp.value=old;
   td.textContent=''; td.appendChild(inp); inp.focus(); inp.select();
-  const save=()=>{ row[h]=inp.value; td.textContent=inp.value; td.title=inp.value; markDirty(); };
-  inp.onblur=save; inp.onkeydown=e=>{ if(e.key==='Enter')save(); if(e.key==='Escape')td.textContent=old; };
+  let saved = false;
+  const save=()=>{
+    if(saved) return; saved=true;
+    const newVal = inp.value;
+    row[h]=newVal; td.textContent=newVal; td.title=newVal;
+    updateStats();
+    saveCell(row, h, newVal);
+  };
+  inp.onblur=save; inp.onkeydown=e=>{ if(e.key==='Enter'){save();} if(e.key==='Escape'){td.textContent=old;} };
 }
 
 function delRow(id) {
   if(!confirm('确定删除？'))return;
-  rows=rows.filter(r=>r._id!==id); markDirty(); filter(); toast('已删除','success');
+  rows=rows.filter(r=>r._id!==id); filter(); toast('已删除（仅本地）','success');
 }
 
 function filter() {
@@ -396,7 +392,7 @@ function toggleAdd() {
 
 function addRow() {
   const r={}; H.forEach(h=>{const el=document.getElementById('nf-'+h);r[h]=el?el.value:'';}); r._id=Date.now();
-  rows.unshift(r); document.getElementById('add-form').classList.remove('on'); markDirty(); filter(); toast('已添加！','success');
+  rows.unshift(r); document.getElementById('add-form').classList.remove('on'); filter(); toast('已添加（仅本地，请刷新同步）','success');
 }
 
 function exportCSV() {
