@@ -256,22 +256,31 @@ async function saveCell(row, h, value) {
   const colIdx = allHeaders.indexOf(h);
   if (sheetRow == null || colIdx === -1) return;
   try {
-    const res = await fetch(API_URL, {
+    await fetch(API_URL, {
       method: 'POST',
+      mode: 'no-cors',
       body: JSON.stringify({ row: sheetRow, col: colIdx + 1, value }),
     });
-    const result = await res.json();
-    if (result.updatedRow) {
-      // Update all fields in this row from the returned sheet row
-      H.forEach((header, j) => {
-        row[header] = result.updatedRow[keepIdx[j]] ?? '';
-      });
-      updateStats();
-    }
     toast('已保存 ✓', 'success');
+    // Wait 1.5s for Sheets to recalculate, then refresh the row
+    setTimeout(() => refreshRow(row), 1500);
   } catch(e) {
     toast('保存失败', 'error');
   }
+}
+
+async function refreshRow(row) {
+  try {
+    const res = await fetch(API_URL + '?t=' + Date.now());
+    const raw = await res.json();
+    const sheetRowData = raw[row._sheetRow - 1];
+    if (!sheetRowData) return;
+    H.forEach((header, j) => {
+      row[header] = sheetRowData[keepIdx[j]] ?? '';
+    });
+    updateStats();
+    render();
+  } catch(e) {}
 }
 
 function buildHead() {
