@@ -233,7 +233,7 @@ async function loadFromSheets() {
   try {
     const res = await fetch(API_URL);
     const raw = await res.json();
-    const allHeaders = raw[0];
+    allHeaders = raw[0];
     keepIdx = allHeaders.map((h,i)=>EXCLUDE.has(h)?-1:i).filter(i=>i>=0);
     H = keepIdx.map(i=>allHeaders[i]);
     rows = raw.slice(1)
