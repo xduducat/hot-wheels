@@ -346,6 +346,7 @@ function startEdit(td,row,h) {
   const save=()=>{
     if(saved) return; saved=true;
     const newVal = inp.value;
+    console.log('Saving:', h, newVal, 'sheetRow:', row._sheetRow);
     row[h]=newVal; td.textContent=newVal; td.title=newVal;
     updateStats();
     saveCell(row, h, newVal);
